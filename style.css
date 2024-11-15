@@ -1,34 +1,34 @@
-/* Center the game area on the screen */
+/* Bakgrunn og justering */
 body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-    background-color: #f0f0f0;
-    font-family: Arial, sans-serif;
-  }
-  
-  /* Game area styling */
-  #game {
-    width: 400px;
-    height: 400px;
-    position: relative;
-    background-color: #d3d3d3;  /* Light gray for game area */
-    border: 2px solid #333;     /* Darker border for contrast */
-    border-radius: 10px;        /* Rounded corners for the game area */
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Subtle shadow */
-  }
-  
-  /* Player character styling */
-  #player {
-    width: 20px;
-    height: 20px;
-    background-color: #4a90e2;   /* Blue color for the player */
-    position: absolute;
-    left: 190px;  /* Centered by default */
-    top: 190px;
-    border-radius: 50%;         /* Circular shape for the player */
-    transition: transform 0.05s ease; /* Smooth movement */
-  }
-  
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #644a4a; /* Bakgrunnsfarge */
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+}
+
+/* Spillområde */
+#game {
+  width: 600px;
+  height: 600px;
+  position: relative;
+  background-color: #d3d3d374; /* Lys grå for spillområdet */
+  border: 2px solid #333333b9; /* Mørk kant */
+  border-radius: 10px; /* Runde hjørner */
+  box-shadow: 0 4px 10px rgba(82, 4, 4, 0.224); /* Myk skygge */
+}
+
+/* Spillfigur */
+#player {
+  width: 20px;
+  height: 20px;
+  background-color: #8cba27; /* Rød-brun farge for spilleren */
+  position: absolute;
+  left: 300px; /* Start i midten */
+  top: 30px;
+  border-radius: 30%; /* Gjør figuren rund */
+  transition: transform 0.02s ease; /* Jevn bevegelse */
+}
