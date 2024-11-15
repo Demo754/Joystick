@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Joystick Kontrollert Spill</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    #game {
+      width: 400px;
+      height: 400px;
+      position: relative;
+      background-color: lightgray;
+    }
+    #player {
+      width: 20px;
+      height: 20px;
+      background-color: blue;
+      position: absolute;
+      left: 190px;
+      top: 190px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game">
+    <div id="player"></div>
+  </div>
+
+  <button onclick="connectJoystick()">Koble til Joystick</button>
+
+  <script src="Game.js"></script>
+</body>
+</html>
