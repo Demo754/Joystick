@@ -1,21 +1,22 @@
+// Hent referanser til HTML-elementer
 let player = document.getElementById('player');
-let posX = 190; // Startposisjon X
-let posY = 190; // Startposisjon Y
-let buffer = ""; // Buffer for ufullstendig JSON-data
+let posX = 300; // Startposisjon X
+let posY = 300; // Startposisjon Y
+let speed = 60; // Standard fart for spilleren
 
-// Funksjon for å oppdatere spillerens posisjon
+// Funksjon for å oppdatere spillerens posisjon basert på joystickverdier
 function movePlayer(x, y) {
-  const speed = 2;
-  if (x < 400) posX -= speed; // Flytt venstre
-  if (x > 600) posX += speed; // Flytt høyre
-  if (y < 400) posY -= speed; // Flytt opp
-  if (y > 600) posY += speed; // Flytt ned
+  const threshold = 50; // Terskel for joystickens følsomhet
+  if (x < 326) posX -= speed; // Flytt venstre
+  if (x > 340) posX += speed; // Flytt høyre
+  if (y < 345) posY -= speed; // Flytt opp
+  if (y > 400) posY += speed; // Flytt ned
 
-  // Begrens bevegelsen innenfor spillområdet
+  // Begrens spillfigurens bevegelser til spillområdet
   posX = Math.max(0, Math.min(380, posX));
   posY = Math.max(0, Math.min(380, posY));
 
-  // Oppdater posisjonen til figuren
+  // Oppdater figurens posisjon
   player.style.left = posX + 'px';
   player.style.top = posY + 'px';
 }
@@ -27,31 +28,33 @@ async function connectJoystick() {
     await port.open({ baudRate: 9600 });
 
     const decoder = new TextDecoderStream();
-    port.readable.pipeTo(decoder.writable);
+    const readableStreamClosed = port.readable.pipeTo(decoder.writable);
     const reader = decoder.readable.getReader();
+
+    console.log("Koblet til joystick!");
+
+    let buffer = ""; // For å samle ufullstendige data
 
     while (true) {
       const { value, done } = await reader.read();
-      if (done) break;
-
+      if (done) {
+        console.log("Serial forbindelse avsluttet.");
+        break;
+      }
       if (value) {
-        // Legg til innkommende data i buffer
-        buffer += value;
-
-        // Håndter JSON-parsing av komplette meldinger
-        const lines = buffer.split('\n'); // Arduino sender data med newline
-        buffer = lines.pop(); // Behold ufullstendig linje i buffer
+        buffer += value; // Legg til data i buffer
+        const lines = buffer.split("\n"); // Splitt på linjeskift
+        buffer = lines.pop(); // Hold siste linje
 
         for (const line of lines) {
           try {
-            // Parse JSON-data fra Arduino
             const data = JSON.parse(line.trim());
             const { x, y } = data;
 
-            // Beveg spilleren basert på joystick-inndata
+            // Beveg spilleren basert på joystick-data
             movePlayer(x, y);
           } catch (error) {
-            console.error("JSON-parsing feilet:", error, line);
+            console.error("Kunne ikke parse JSON:", line, error);
           }
         }
       }
@@ -60,3 +63,17 @@ async function connectJoystick() {
     console.error("Kan ikke koble til joystick:", error);
   }
 }
+
+// Funksjon for å justere spillerens fart
+function setSpeed(newSpeed) {
+  speed = newSpeed;
+  console.log("Ny fart satt til:", speed);
+}
+
+// Koble til når brukeren klikker på knappen
+document.getElementById('connectButton').addEventListener('click', connectJoystick);
+
+// Oppdater fart basert på input
+document.getElementById('speedInput').addEventListener('input', (event) => {
+  setSpeed(Number(event.target.value));
+});
