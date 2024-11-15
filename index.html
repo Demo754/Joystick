@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Joystick Kontrollert Spill</title>
+  <title>Alien Space Shooter</title>
   <style>
     body {
       display: flex;
@@ -11,30 +11,309 @@
       align-items: center;
       height: 100vh;
       margin: 0;
+      background-color: #282c34;
+      font-family: Arial, sans-serif;
     }
+
+    /* Spillområdet */
     #game {
-      width: 400px;
-      height: 400px;
+      width: 600px;
+      height: 600px;
       position: relative;
-      background-color: lightgray;
+      background-color: rgba(27, 3, 50, 0.954);
+      border: 2px solid #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(82, 4, 4, 0.224);
     }
+
+    /* Spillfiguren (romskipet) */
     #player {
-      width: 20px;
-      height: 20px;
-      background-color: blue;
+      width: 50px;
+      height: 50px;
       position: absolute;
-      left: 190px;
-      top: 190px;
+      left: 300px;
+      top: 500px;
+      background-image: url('ship.png'); /* Sett til lokal filsti */
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+
+    /* Laser */
+    .laser {
+      width: 10px;
+      height: 15px;
+      background-color: red;
+      position: absolute;
+    }
+
+    /* Alien */
+    .alien {
+      width: 40px; /* Passende størrelse for alienene */
+      height: 40px;
+      position: absolute;
+      background-image: url('alien.png'); /* Sett til lokal filsti */
+      background-size: contain; /* Sørg for at bildene ikke blir forvrengt */
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+
+    /* Knapper */
+    button {
+      margin-top: 20px;
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    /* Livene */
+    #lives {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      font-size: 20px;
+      color: rgb(221, 8, 8);
+    }
+
+      /* Livene */
+    #lives, #score {
+      position: absolute;
+      top: 10px;
+      font-size: 20px;
+      color: rgb(203, 14, 14);
+    }
+
+    #score {
+      right: 10px;
     }
   </style>
 </head>
 <body>
   <div id="game">
     <div id="player"></div>
+    <div id="lives">Lives: 3</div>
+    <div id="score">Score: 0</div>
   </div>
 
-  <button onclick="connectJoystick()">Koble til Joystick</button>
+  <!-- Koble til joystick -->
+  <button id="connectButton">Koble til Joystick</button>
 
-  <script src="Game.js"></script>
+  <script>
+    // Hent referanser til HTML-elementer
+    let player = document.getElementById('player');
+    let livesDisplay = document.getElementById('lives');
+    let scoreDisplay = document.getElementById('score');
+    let posX = 300; // Startposisjon X
+    let posY = 500; // Startposisjon Y
+    let speed = 12;
+    let laserCooldown = 0;
+    let laserCooldownTime = 1;
+    let isButtonPressed = false;
+    let playerLives = 3; // Spilleren starter med 3 liv
+    let aliens = []; // Array for å lagre alienene
+    let lasers = []; // Array for å lagre lasers
+    let score = 0; // Spilleren starter med 0 poeng
+
+    // Funksjon for å flytte spilleren basert på joystick-inndata
+    function movePlayer(x, y) {
+      if (x < 326) posX -= speed;
+      if (x > 340) posX += speed;
+      if (y < 345) posY -= speed;
+      if (y > 400) posY += speed;
+
+      // Begrens bevegelsen innenfor spillområdet
+      posX = Math.max(0, Math.min(560, posX));
+      posY = Math.max(0, Math.min(560, posY));
+
+      // Oppdater spillerens posisjon
+      player.style.left = posX + 'px';
+      player.style.top = posY + 'px';
+    }
+
+    //Laserene for hver side av skipet
+    function shootLaser() {
+      if (laserCooldown > 0) return; // Ikke skyte hvis cooldown ikke er over
+
+      // Laser rett frem
+      let laser1 = document.createElement('div');
+      laser1.classList.add('laser');
+      laser1.style.left = posX + 43 + 'px'; // Juster for midten av spilleren
+      laser1.style.top = posY + 'px'; // Laserens startposisjon
+      document.getElementById('game').appendChild(laser1);
+      lasers.push(laser1);
+
+      let laser2 = document.createElement('div');
+      laser2.classList.add('laser');
+      laser2.style.left = posX + -3 + 'px'; // Juster for midten av spilleren
+      laser2.style.top = posY + 'px'; // Laserens startposisjon
+      document.getElementById('game').appendChild(laser2);
+      lasers.push(laser2);
+
+      // Animer laserne fremover, men la hver laser ha sin egen hastighet
+      lasers.forEach(laser => {
+        let laserInterval = setInterval(() => {
+          laser.style.top = parseInt(laser.style.top) - 5 + 'px'; // Beveger laserne oppover
+
+          // Fjern laserene når de er utenfor spillområdet
+          if (parseInt(laser.style.top) <= 0) {
+            laser.remove();
+            lasers = lasers.filter(l => l !== laser); // Fjern fra lasers array
+          }
+
+          // Sjekk kollisjon med aliens
+          checkLaserCollision(laser);
+        }, 50);
+      });
+
+      // Start cooldown for laseren
+      laserCooldown = laserCooldownTime;
+      setTimeout(() => {
+        laserCooldown = 0;
+      }, laserCooldownTime * 1000);
+    }
+
+    // Funksjon for å lage aliens
+    function spawnAlien() {
+      let alien = document.createElement('div');
+      alien.classList.add('alien');
+      alien.style.left = Math.random() * 560 + 'px'; // Random posisjon
+      alien.style.top = '0px'; // Starter på toppen
+      document.getElementById('game').appendChild(alien);
+      aliens.push(alien);
+
+      // Beveg alien nedover
+      let alienInterval = setInterval(() => {
+        let alienTop = parseInt(alien.style.top);
+        alien.style.top = alienTop + 2 + 'px'; // Alien beveger seg nedover
+
+        // Sjekk om alien treffer spilleren
+        if (isCollision(alien, player)) {
+          loseLife(); // Spilleren mister et liv
+          clearInterval(alienInterval);
+          alien.remove(); // Fjern alienen
+        }
+
+        // Hvis alien treffer bunnen, fjern alien
+        if (alienTop >= 580) {
+          clearInterval(alienInterval);
+          alien.remove();
+        }
+      }, 50);
+    }
+
+    // Funksjon for å sjekke kollisjon mellom laser og alien
+    function checkLaserCollision(laser) {
+      lasers.forEach(laser => {
+        aliens.forEach(alien => {
+          if (isCollision(laser, alien)) {
+            // Hvis kollisjon, fjern både laser og alien
+            laser.remove();
+            alien.remove();
+            lasers = lasers.filter(l => l !== laser);
+            aliens = aliens.filter(a => a !== alien);
+
+             // Oppdater poeng
+             score += 10;
+            scoreDisplay.textContent = 'Score: ' + score;
+          }
+        });
+      });
+    }
+
+    // Funksjon for å sjekke om det er en kollisjon mellom to elementer
+    function isCollision(element1, element2) {
+      let rect1 = element1.getBoundingClientRect();
+      let rect2 = element2.getBoundingClientRect();
+
+      // Legg til en liten buffer rundt elementene for å unngå tidlige kollisjoner
+  const buffer = 9;
+
+return !(
+  rect1.bottom - buffer < rect2.top ||
+  rect1.top + buffer > rect2.bottom ||
+  rect1.right - buffer < rect2.left ||
+  rect1.left + buffer > rect2.right
+);
+}
+
+    // Funksjon for å håndtere livsreduksjon
+    function loseLife() {
+      playerLives--;
+      livesDisplay.textContent = 'Lives: ' + playerLives;
+
+      if (playerLives <= 0) {
+        alert('Game Over! Du har tapt!');
+        resetGame();
+      }
+    }
+
+    // Funksjon for å tilbakestille spillet
+    function resetGame() {
+      playerLives = 3;
+      score = 0;
+      livesDisplay.textContent = 'Lives: ' + playerLives;
+      scoreDisplay.textContent = 'Score: ' + score;
+      aliens.forEach(alien => alien.remove());
+      lasers.forEach(laser => laser.remove());
+      aliens = [];
+      lasers = [];
+    }
+
+    // Funksjon for å koble til joystick via Web Serial API
+    async function connectJoystick() {
+      try {
+        const port = await navigator.serial.requestPort();
+        await port.open({ baudRate: 9600 });
+
+        const decoder = new TextDecoderStream();
+        const readableStreamClosed = port.readable.pipeTo(decoder.writable);
+        const reader = decoder.readable.getReader();
+
+        console.log("Koblet til joystick!");
+
+        let buffer = "";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          if (value) {
+            buffer += value;
+            const lines = buffer.split("\n");
+            buffer = lines.pop();
+
+            for (const line of lines) {
+              try {
+                const data = JSON.parse(line.trim());
+                const { x, y, button } = data;
+
+                // Beveg spilleren basert på joystick-data
+                movePlayer(x, y);
+
+                // Hvis knappen på joysticken er trykket, skyte laser
+                if (button === 1 && !isButtonPressed) {
+                  isButtonPressed = true;
+                  shootLaser();
+                }
+
+                if (button !== 1) {
+                  isButtonPressed = false;
+                }
+              } catch (error) {
+                console.error("Kunne ikke parse JSON:", line, error);
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Kan ikke koble til joystick:", error);
+      }
+    }
+
+    // Koble til når brukeren klikker på knappen
+    document.getElementById('connectButton').addEventListener('click', connectJoystick);
+
+    // Lag aliens hvert 0.7 sekund 
+    setInterval(spawnAlien, 700);
+  </script>
 </body>
 </html>
